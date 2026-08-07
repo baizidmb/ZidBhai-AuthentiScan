@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { X, Key, Check, Info, ShieldAlert } from 'lucide-react';
+import { X, Key, Check, Info, ShieldCheck, Server } from 'lucide-react';
 import { getStoredApiKey, setStoredApiKey } from '../utils/huggingFaceApi';
+import { getStoredTruthScanKey, setStoredTruthScanKey } from '../utils/truthScanApi';
 
 export default function ApiKeyModal({ isOpen, onClose }) {
-  const [apiKey, setApiKey] = useState('');
+  const [hfKey, setHfKey] = useState('');
+  const [truthScanKey, setTruthScanKey] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setApiKey(getStoredApiKey());
+      setHfKey(getStoredApiKey());
+      setTruthScanKey(getStoredTruthScanKey());
       setSavedSuccess(false);
     }
   }, [isOpen]);
@@ -17,7 +20,8 @@ export default function ApiKeyModal({ isOpen, onClose }) {
 
   const handleSave = (e) => {
     e.preventDefault();
-    setStoredApiKey(apiKey);
+    setStoredApiKey(hfKey);
+    setStoredTruthScanKey(truthScanKey);
     setSavedSuccess(true);
     setTimeout(() => {
       onClose();
@@ -25,8 +29,10 @@ export default function ApiKeyModal({ isOpen, onClose }) {
   };
 
   const handleClear = () => {
-    setApiKey('');
+    setHfKey('');
+    setTruthScanKey('');
     setStoredApiKey('');
+    setStoredTruthScanKey('');
     setSavedSuccess(true);
     setTimeout(() => {
       onClose();
@@ -48,51 +54,64 @@ export default function ApiKeyModal({ isOpen, onClose }) {
         {/* Modal Title */}
         <div className="flex items-center space-x-3 mb-4">
           <div className="p-3 rounded-2xl bg-cyan-950/80 border border-cyan-500/30 text-cyan-400">
-            <Key className="w-6 h-6" />
+            <Server className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Hugging Face API Settings</h2>
-            <p className="text-xs text-slate-400">Optional custom Access Token manager</p>
+            <h2 className="text-xl font-bold text-white">Detection Server Settings</h2>
+            <p className="text-xs text-slate-400">TruthScan & Hugging Face Engine Credentials</p>
           </div>
         </div>
 
         {/* Info Callout */}
         <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 mb-5 text-xs text-slate-300 space-y-1">
           <p className="flex items-center gap-1.5 font-semibold text-cyan-300">
-            <Info className="w-4 h-4" /> Free Public API Mode is Active by default
+            <Info className="w-4 h-4" /> TruthScan & Hugging Face Server Integration
           </p>
           <p className="text-slate-400 leading-relaxed">
-            Adding your free Hugging Face User Access Token (starts with <code className="text-cyan-300 font-mono">hf_</code>) bypasses shared rate-limits and enables higher throughput for heavy image and text inference.
+            Enter your TruthScan API key (`POST detect-text.truthscan.com`) or Hugging Face access token to query enterprise detection servers directly.
           </p>
         </div>
 
-        {/* Input Form */}
+        {/* Form Inputs */}
         <form onSubmit={handleSave} className="space-y-4">
+          
+          {/* TruthScan Key Input */}
           <div>
-            <label className="block text-xs font-mono text-slate-300 uppercase tracking-wider mb-2 font-semibold">
-              User Access Token (hf_...)
+            <label className="block text-xs font-mono text-cyan-400 uppercase tracking-wider mb-1.5 font-semibold">
+              TruthScan API Key
             </label>
             <input
               type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-              className="w-full px-4 py-3 rounded-xl glass-input text-sm text-slate-100 font-mono focus:outline-none"
+              value={truthScanKey}
+              onChange={(e) => setTruthScanKey(e.target.value)}
+              placeholder="TruthScan API Key (e.g. ts_live_...)"
+              className="w-full px-4 py-2.5 rounded-xl glass-input text-sm text-slate-100 font-mono focus:outline-none"
             />
-            <p className="text-[11px] text-slate-500 mt-1.5">
-              Token is saved locally in your browser's <code className="text-slate-400">localStorage</code> and never sent to third-party analytics.
-            </p>
+          </div>
+
+          {/* Hugging Face Key Input */}
+          <div>
+            <label className="block text-xs font-mono text-violet-400 uppercase tracking-wider mb-1.5 font-semibold">
+              Hugging Face User Access Token
+            </label>
+            <input
+              type="password"
+              value={hfKey}
+              onChange={(e) => setHfKey(e.target.value)}
+              placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              className="w-full px-4 py-2.5 rounded-xl glass-input text-sm text-slate-100 font-mono focus:outline-none"
+            />
           </div>
 
           {/* Action Buttons */}
           <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
-            {getStoredApiKey() ? (
+            {(getStoredApiKey() || getStoredTruthScanKey()) ? (
               <button
                 type="button"
                 onClick={handleClear}
                 className="px-3.5 py-2 rounded-xl bg-rose-950/60 border border-rose-500/30 text-rose-300 hover:bg-rose-900/60 text-xs font-semibold transition-colors"
               >
-                Clear Token
+                Clear Credentials
               </button>
             ) : <div />}
 
@@ -114,7 +133,7 @@ export default function ApiKeyModal({ isOpen, onClose }) {
                     <span>Saved!</span>
                   </>
                 ) : (
-                  <span>Save Settings</span>
+                  <span>Save Credentials</span>
                 )}
               </button>
             </div>
