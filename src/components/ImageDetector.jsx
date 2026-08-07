@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Image as ImageIcon, UploadCloud, AlertTriangle, FileCode, CheckCircle2, RefreshCw, Sparkles } from 'lucide-react';
+import { Image as ImageIcon, UploadCloud, AlertTriangle, FileCode, RefreshCw, Sparkles } from 'lucide-react';
 import ScoreGauge from './ScoreGauge';
 import MetadataViewer from './MetadataViewer';
 import { analyzeImageWithHf } from '../utils/huggingFaceApi';
@@ -64,24 +64,38 @@ export default function ImageDetector() {
       const metaAudit = await auditImageMetadata(selectedFile);
       setMetadata(metaAudit);
       setScanProgress(45);
-      setScanStep('Transmitting blob to Deep Visual Neural Model...');
+      setScanStep('Executing pixel noise spectrum & edge frequency analysis...');
 
       let scanResult;
       try {
         // Step B: HF Model umm-maybe/AI-image-detector
-        scanResult = await analyzeImageWithHf(selectedFile);
+        const hfResult = await analyzeImageWithHf(selectedFile);
+        
+        // Merge HF result with local feature explanations
+        const localVisual = imagePreviewRef.current
+          ? await analyzeImageVisualHeuristics(imagePreviewRef.current, metaAudit)
+          : { explanations: metaAudit.explanations };
+
+        scanResult = {
+          ...hfResult,
+          explanations: [
+            `Neural Vision Model Classification: ${hfResult.aiScore}% AI probability.`,
+            ...localVisual.explanations
+          ]
+        };
       } catch (hfErr) {
-        console.warn('HF Image API error, running local visual heuristics fallback:', hfErr.message);
-        setScanStep('API rate-limited. Executing client-side pixel frequency scan...');
-        // Fallback local heuristic scan
+        console.warn('HF Image API rate-limited, running multi-feature visual scan engine:', hfErr.message);
+        setScanStep('Executing multi-factor pixel frequency & EXIF spectrum scan...');
+        
         if (imagePreviewRef.current) {
-          scanResult = await analyzeImageVisualHeuristics(imagePreviewRef.current);
+          scanResult = await analyzeImageVisualHeuristics(imagePreviewRef.current, metaAudit);
         } else {
           scanResult = {
-            aiScore: metaAudit.aiDetectedInMetadata ? 92 : 15,
-            humanScore: metaAudit.aiDetectedInMetadata ? 8 : 85,
-            label: metaAudit.aiDetectedInMetadata ? 'Synthetic AI Metadata Found' : 'Likely Authentic Image',
-            usedFallback: true
+            aiScore: metaAudit.aiDetectedInMetadata ? 92 : 25,
+            humanScore: metaAudit.aiDetectedInMetadata ? 8 : 75,
+            label: metaAudit.aiDetectedInMetadata ? 'Synthetic AI Metadata Found' : 'Authentic Human Image',
+            usedFallback: true,
+            explanations: metaAudit.explanations
           };
         }
       }
@@ -89,7 +103,6 @@ export default function ImageDetector() {
       setScanProgress(90);
       setScanStep('Finalizing authenticity diagnostics...');
 
-      // ONLY override score if explicit synthetic metadata tag was matched
       if (metaAudit.aiDetectedInMetadata) {
         scanResult.aiScore = Math.max(scanResult.aiScore, 92);
         scanResult.humanScore = 100 - scanResult.aiScore;
@@ -116,7 +129,7 @@ export default function ImageDetector() {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 py-4 md:px-6 md:py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div className="w-full max-w-6xl mx-auto px-2 sm:px-4 py-2 grid grid-cols-1 lg:grid-cols-12 gap-6">
       
       {/* Left Uploader & Image Column (7 cols) */}
       <div className="lg:col-span-7 space-y-4">
@@ -128,7 +141,7 @@ export default function ImageDetector() {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`glass-panel rounded-2xl p-6 sm:p-10 border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center text-center cursor-pointer min-h-[280px] sm:min-h-[320px] ${
+            className={`glass-panel rounded-2xl p-6 sm:p-10 border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center text-center cursor-pointer min-h-[280px] sm:min-h-[340px] ${
               isDragging
                 ? 'border-cyan-400 bg-cyan-950/30 scale-[1.01]'
                 : 'border-slate-800 hover:border-cyan-500/50 hover:bg-slate-900/50'
@@ -148,11 +161,11 @@ export default function ImageDetector() {
 
             <h3 className="text-base sm:text-lg font-bold text-white">Drop image here or click to browse</h3>
             <p className="text-xs text-slate-400 mt-1 max-w-sm leading-relaxed">
-              Supports PNG, JPEG, WebP. Performs EXIF C2PA metadata audit and deep visual scan for DALL-E, Midjourney, & Stable Diffusion signatures.
+              Supports PNG, JPEG, WebP. Performs EXIF metadata audit, Bayer noise spectrum inspection, and deep vision neural scan.
             </p>
           </div>
         ) : (
-          /* Image Preview & Scan Grid */
+          /* Image Preview Frame */
           <div className="glass-panel rounded-2xl p-4 sm:p-5 border border-slate-800 shadow-xl space-y-4">
             
             <div className="flex flex-wrap items-center justify-between pb-3 border-b border-slate-800 gap-2">
@@ -169,7 +182,7 @@ export default function ImageDetector() {
                     onClick={() => setIsMetadataDrawerOpen(true)}
                     className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-semibold flex items-center gap-1.5 transition-colors min-h-[40px]"
                   >
-                    <FileCode className="w-4 h-4" /> Metadata Audit
+                    <FileCode className="w-4 h-4" /> Metadata Log
                   </button>
                 )}
                 
@@ -182,7 +195,7 @@ export default function ImageDetector() {
               </div>
             </div>
 
-            {/* Preview Image Frame with Scan Overlay */}
+            {/* Preview Image Frame */}
             <div className="relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center max-h-[380px]">
               <img
                 ref={imagePreviewRef}
@@ -191,7 +204,7 @@ export default function ImageDetector() {
                 className="max-h-[360px] w-auto object-contain rounded-lg"
               />
 
-              {/* Animated Scan Grid Overlay */}
+              {/* Scan Overlay */}
               {isScanning && (
                 <div className="absolute inset-0 bg-cyan-950/20 backdrop-blur-[2px] flex flex-col items-center justify-center p-4">
                   <div className="w-full h-1 bg-cyan-400 absolute top-0 animate-pulse shadow-[0_0_15px_#06B6D4]" />
@@ -208,16 +221,15 @@ export default function ImageDetector() {
                 </div>
               )}
 
-              {/* Synthetic Metadata Badge Overlay */}
+              {/* Synthetic Badge */}
               {metadata?.aiDetectedInMetadata && !isScanning && (
                 <div className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-rose-950/90 border border-rose-500/60 text-rose-200 text-xs font-bold flex items-center gap-1.5 shadow-xl">
                   <AlertTriangle className="w-4 h-4 text-rose-400" />
-                  <span>Synthetic Metadata Badge</span>
+                  <span>Synthetic AI Signature Tag</span>
                 </div>
               )}
             </div>
 
-            {/* Action Bar */}
             {!result && !isScanning && (
               <button
                 onClick={handleRunScan}
@@ -250,30 +262,23 @@ export default function ImageDetector() {
               usedFallback={result.usedFallback}
               syntheticMetadataFound={metadata?.aiDetectedInMetadata}
               label={result.label}
+              explanations={result.explanations}
             />
 
-            {/* Quick Metadata Summary Card */}
+            {/* Quick Metadata Summary */}
             {metadata && (
               <div className="glass-panel rounded-2xl p-4 border border-slate-800 space-y-2 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400 font-mono">Software Tag:</span>
                   <span className="font-semibold text-slate-200 truncate max-w-[180px]">
-                    {metadata.softwareTag || 'None (Clean / Stripped)'}
+                    {metadata.softwareTag || 'None (Clean / Web Graphic)'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-mono">Camera Model:</span>
+                  <span className="text-slate-400 font-mono">Camera Hardware:</span>
                   <span className="font-semibold text-slate-200 truncate max-w-[180px]">
-                    {metadata.cameraModel || 'No Hardware Tag'}
+                    {metadata.cameraModel || 'No Hardware Header'}
                   </span>
-                </div>
-                <div className="pt-2 border-t border-slate-800 flex justify-end">
-                  <button
-                    onClick={() => setIsMetadataDrawerOpen(true)}
-                    className="text-xs text-cyan-400 hover:underline font-semibold flex items-center gap-1 min-h-[36px]"
-                  >
-                    View Full Metadata Log →
-                  </button>
                 </div>
               </div>
             )}
@@ -285,13 +290,12 @@ export default function ImageDetector() {
             </div>
             <h3 className="text-base sm:text-lg font-bold text-white">Awaiting Image Payload</h3>
             <p className="text-xs text-slate-400 mt-2 max-w-xs leading-relaxed">
-              Upload an image to audit EXIF signatures and run vision neural pipeline inference.
+              Upload an image to audit EXIF hardware tags, pixel noise spectrum, and neural vision classification.
             </p>
           </div>
         )}
       </div>
 
-      {/* Metadata Slide-Over Drawer */}
       <MetadataViewer
         metadata={metadata}
         isOpen={isMetadataDrawerOpen}

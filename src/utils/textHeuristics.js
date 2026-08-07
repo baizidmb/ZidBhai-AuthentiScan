@@ -1,40 +1,28 @@
 /**
- * Client-Side Heuristic Fallback Engine for Text Authenticity Analysis
- * Implements Burstiness (paragraph-grained sentence length variance), 
- * Perplexity/Entropy estimates, and LLM phrase pattern detection.
+ * Client-Side Heuristic Engine & Explanatory Diagnostic Generator for Text Authenticity
+ * Evaluates Burstiness (sentence length variance across multi-sentence paragraphs), 
+ * Perplexity/Entropy proxies, and LLM signature phrase density.
  */
 
-// Common LLM fingerprint phrases
+// Common LLM fingerprint phrases with exact diagnostic descriptions
 const LLM_PHRASE_PATTERNS = [
-  { phrase: "in conclusion", weight: 2.5 },
-  { phrase: "delve into", weight: 3.5 },
-  { phrase: "testament to", weight: 3.0 },
-  { phrase: "it's important to remember", weight: 3.0 },
-  { phrase: "it is important to note", weight: 3.0 },
-  { phrase: "plays a crucial role", weight: 2.8 },
-  { phrase: "plays a vital role", weight: 2.8 },
-  { phrase: "a key factor", weight: 2.0 },
-  { phrase: "rich tapestry", weight: 4.0 },
-  { phrase: "beacon of", weight: 3.5 },
-  { phrase: "furthermore", weight: 1.8 },
-  { phrase: "moreover", weight: 1.8 },
-  { phrase: "let's explore", weight: 2.2 },
-  { phrase: "in summary", weight: 2.0 },
-  { phrase: "serves as a", weight: 2.0 },
-  { phrase: "ever-evolving landscape", weight: 4.0 },
-  { phrase: "multifaceted aspect", weight: 3.2 },
-  { phrase: "it is worth noting", weight: 2.8 },
-  { phrase: "delving deeper", weight: 3.5 },
-  { phrase: "by understanding", weight: 1.8 },
-  { phrase: "it is essential to", weight: 2.5 },
-  { phrase: "a cornerstone of", weight: 2.8 }
+  { phrase: "in conclusion", weight: 2.5, desc: "Generic LLM concluding transition" },
+  { phrase: "delve into", weight: 3.5, desc: "ChatGPT high-frequency vocabulary marker ('delve')" },
+  { phrase: "testament to", weight: 3.0, desc: "Common LLM hyperbolic filler ('testament to')" },
+  { phrase: "it's important to remember", weight: 3.0, desc: "ChatGPT warning boilerplate" },
+  { phrase: "it is important to note", weight: 3.0, desc: "LLM formal passive disclaimer" },
+  { phrase: "plays a crucial role", weight: 2.8, desc: "Repetitive LLM functional phrase" },
+  { phrase: "plays a vital role", weight: 2.8, desc: "Repetitive LLM functional phrase" },
+  { phrase: "rich tapestry", weight: 4.0, desc: "Signature AI metaphor ('rich tapestry')" },
+  { phrase: "beacon of", weight: 3.5, desc: "AI stylistic embellishment" },
+  { phrase: "furthermore", weight: 1.8, desc: "Standard AI paragraph transition" },
+  { phrase: "moreover", weight: 1.8, desc: "Standard AI paragraph transition" },
+  { phrase: "let's explore", weight: 2.2, desc: "Conversational AI intro prompt" },
+  { phrase: "in summary", weight: 2.0, desc: "LLM structural conclusion" },
+  { phrase: "ever-evolving landscape", weight: 4.0, desc: "Overused AI cliché" },
+  { phrase: "multifaceted aspect", weight: 3.2, desc: "Abstract AI filler phrase" }
 ];
 
-/**
- * Calculates sentence length variance (Burstiness) across paragraphs.
- * Human writing has high burstiness (mix of short punchy & long complex sentences).
- * AI text tends to be uniform (low variance).
- */
 function calculateBurstiness(paragraphs) {
   let sentenceLengths = [];
 
@@ -49,18 +37,23 @@ function calculateBurstiness(paragraphs) {
   });
 
   if (sentenceLengths.length < 2) {
-    return { score: 50, variance: 0, stdDev: 0 };
+    return { score: 50, variance: 0, stdDev: 0, sentenceCount: sentenceLengths.length };
   }
 
   const mean = sentenceLengths.reduce((a, b) => a + b, 0) / sentenceLengths.length;
   const variance = sentenceLengths.reduce((sq, n) => sq + Math.pow(n - mean, 2), 0) / sentenceLengths.length;
   const stdDev = Math.sqrt(variance);
 
-  // Standardized burstiness score (High variance = Human writing, Low variance = AI uniformity)
-  // Low stdDev (< 4) -> High AI probability. High stdDev (> 9) -> High Human probability.
-  const normVariance = Math.min(Math.max(stdDev, 2), 15);
-  // Map normVariance 2..15 to AI probability 85..15
-  const burstinessAiScore = Math.round(100 - ((normVariance - 2) / 13) * 70);
+  // StdDev < 4.0 indicates robotic uniformity (high AI score)
+  // StdDev > 8.0 indicates natural human sentence variation (low AI score)
+  let burstinessAiScore = 50;
+  if (stdDev < 4.0) {
+    burstinessAiScore = Math.round(85 - (stdDev / 4.0) * 20);
+  } else if (stdDev > 7.5) {
+    burstinessAiScore = Math.round(Math.max(10, 40 - (stdDev - 7.5) * 4));
+  } else {
+    burstinessAiScore = Math.round(65 - ((stdDev - 4.0) / 3.5) * 25);
+  }
 
   return {
     score: burstinessAiScore,
@@ -71,16 +64,12 @@ function calculateBurstiness(paragraphs) {
   };
 }
 
-/**
- * Calculates Perplexity / Vocabulary Entropy proxy across multi-sentence paragraph blocks.
- * AI models prefer common vocabulary & smooth transitions (lower entropy).
- */
 function calculatePerplexityProxy(paragraphs) {
   const allText = paragraphs.join(' ').toLowerCase();
   const words = allText.match(/\b[a-z']+\b/g) || [];
 
   if (words.length === 0) {
-    return { score: 50, uniqueRatio: 0.5, avgWordLength: 5 };
+    return { score: 50, uniqueRatio: 0.5, avgWordLength: 5, totalWords: 0 };
   }
 
   const wordCounts = {};
@@ -89,20 +78,24 @@ function calculatePerplexityProxy(paragraphs) {
   const uniqueWords = Object.keys(wordCounts).length;
   const uniqueRatio = uniqueWords / words.length;
 
-  // Calculate Shannon entropy over word distribution
   let entropy = 0;
   Object.values(wordCounts).forEach(count => {
     const p = count / words.length;
     entropy -= p * Math.log2(p);
   });
 
-  // Calculate average word length
   const totalChars = words.reduce((sum, w) => sum + w.length, 0);
   const avgWordLength = totalChars / words.length;
 
-  // Higher unique ratio and higher entropy = human variation.
-  // AI typically scores lower on unique word ratio for medium texts.
-  const perplexityAiScore = Math.round(Math.min(Math.max((0.75 - uniqueRatio) * 120 + (6.5 - entropy) * 15, 10), 90));
+  // High unique ratio & entropy = Human variability
+  let perplexityAiScore = 50;
+  if (uniqueRatio < 0.45) {
+    perplexityAiScore = 75;
+  } else if (uniqueRatio > 0.65) {
+    perplexityAiScore = 20;
+  } else {
+    perplexityAiScore = Math.round(75 - ((uniqueRatio - 0.45) / 0.20) * 55);
+  }
 
   return {
     score: perplexityAiScore,
@@ -113,21 +106,19 @@ function calculatePerplexityProxy(paragraphs) {
   };
 }
 
-/**
- * Finds LLM signature phrases and returns matches with offsets
- */
 export function findFlaggedPhrases(text) {
   const lowerText = text.toLowerCase();
   const flagged = [];
 
-  LLM_PHRASE_PATTERNS.forEach(({ phrase, weight }) => {
+  LLM_PHRASE_PATTERNS.forEach(({ phrase, weight, desc }) => {
     let pos = lowerText.indexOf(phrase);
     while (pos !== -1) {
       flagged.push({
         phrase: text.substring(pos, pos + phrase.length),
         startIndex: pos,
         endIndex: pos + phrase.length,
-        weight
+        weight,
+        desc
       });
       pos = lowerText.indexOf(phrase, pos + phrase.length);
     }
@@ -136,10 +127,6 @@ export function findFlaggedPhrases(text) {
   return flagged;
 }
 
-/**
- * Analyzes text using local heuristic fallback.
- * Uses paragraph-level granularity to prevent single short sentence extreme skews.
- */
 export function analyzeTextHeuristics(text) {
   if (!text || text.trim().length === 0) {
     return {
@@ -147,30 +134,54 @@ export function analyzeTextHeuristics(text) {
       humanScore: 100,
       label: 'Empty Input',
       usedFallback: true,
+      explanations: ['No text content provided.'],
       metrics: { wordCount: 0, sentenceCount: 0 }
     };
   }
 
-  // Split into paragraphs (grouping at least 3 paragraphs or multi-sentence blocks)
   const rawParagraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
   const paragraphs = rawParagraphs.length > 0 ? rawParagraphs : [text.trim()];
 
   const burstiness = calculateBurstiness(paragraphs);
   const perplexity = calculatePerplexityProxy(paragraphs);
   const flagged = findFlaggedPhrases(text);
+  const explanations = [];
 
-  // Pattern penalty
-  const phrasePenalty = Math.min(flagged.reduce((sum, item) => sum + item.weight * 12, 0), 40);
+  // Phrase Penalty
+  const phrasePenalty = Math.min(flagged.reduce((sum, item) => sum + item.weight * 12, 0), 45);
 
-  // Weighted Combination of heuristics
-  let rawAiScore = Math.round(burstiness.score * 0.45 + perplexity.score * 0.35 + phrasePenalty);
+  if (flagged.length > 0) {
+    const phraseList = flagged.map(f => `"${f.phrase}"`).slice(0, 3).join(', ');
+    explanations.push(`Detected ${flagged.length} signature LLM transition phrases (${phraseList}).`);
+  } else {
+    explanations.push('Zero generic LLM transition clichés found ("rich tapestry", "delve into", etc.).');
+  }
 
-  // Short text moderation dampening so 1 short sentence doesn't jump to 100% or 0%
+  // Burstiness Explanation
+  if (burstiness.stdDev < 4.0) {
+    explanations.push(`Low sentence length variation (stdDev: ${burstiness.stdDev}), indicating unnatural, uniform sentence pacing typical of LLMs.`);
+  } else if (burstiness.stdDev > 7.0) {
+    explanations.push(`High burstiness sentence variation (stdDev: ${burstiness.stdDev}), characteristic of organic human writing.`);
+  } else {
+    explanations.push(`Moderate sentence length variance (stdDev: ${burstiness.stdDev}).`);
+  }
+
+  // Perplexity Explanation
+  if (perplexity.uniqueRatio < 48) {
+    explanations.push(`Repetitive vocabulary selection (${perplexity.uniqueRatio}% unique word ratio).`);
+  } else if (perplexity.uniqueRatio > 62) {
+    explanations.push(`High vocabulary diversity (${perplexity.uniqueRatio}% unique words), matching human expression.`);
+  }
+
+  // Calculate final score
+  let rawAiScore = Math.round(burstiness.score * 0.40 + perplexity.score * 0.30 + phrasePenalty);
+
+  // Short text moderation dampening
   const totalWords = perplexity.totalWords;
   if (totalWords < 25) {
-    // Dampen score towards neutral 50% for very short input
     const confidence = totalWords / 25;
     rawAiScore = Math.round(rawAiScore * confidence + 50 * (1 - confidence));
+    explanations.push('Short text input: score moderated toward neutral confidence due to sample size.');
   }
 
   const finalAiScore = Math.min(Math.max(rawAiScore, 5), 95);
@@ -182,11 +193,12 @@ export function analyzeTextHeuristics(text) {
     label: finalAiScore > 50 ? 'Likely AI-Generated Text' : 'Likely Human-Written Text',
     usedFallback: true,
     flaggedPhrases: flagged,
+    explanations,
     metrics: {
       wordCount: perplexity.totalWords,
       sentenceCount: burstiness.sentenceCount,
       avgWordLength: perplexity.avgWordLength,
-      burstinessScore: 100 - burstiness.score, // higher = more human burstiness
+      burstinessScore: 100 - burstiness.score,
       perplexityScore: 100 - perplexity.score,
       stdDev: burstiness.stdDev,
       uniqueRatio: perplexity.uniqueRatio,

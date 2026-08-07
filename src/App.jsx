@@ -3,12 +3,12 @@ import Header from './components/Header';
 import NavigationTabs from './components/NavigationTabs';
 import TextDetector from './components/TextDetector';
 import ImageDetector from './components/ImageDetector';
-import VideoDetector from './components/VideoDetector';
 import DeveloperModal from './components/DeveloperModal';
 import ApiKeyModal from './components/ApiKeyModal';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('text');
+  // Default to 'image' tab on home screen load
+  const [activeTab, setActiveTab] = useState('image');
   const [isDeveloperModalOpen, setIsDeveloperModalOpen] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
@@ -22,14 +22,13 @@ export default function App() {
           onOpenDeveloperModal={() => setIsDeveloperModalOpen(true)}
         />
 
-        {/* Tab Navigation Pill Bar */}
+        {/* Tab Navigation Bar (Default Image Tab) */}
         <NavigationTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
-        {/* Active Module Panel with mobile-first container padding */}
-        <main className="px-4 py-6 md:px-8 md:py-10 pb-16">
-          {activeTab === 'text' && <TextDetector />}
+        {/* Active Module Panel */}
+        <main className="px-3 py-4 md:px-8 md:py-8 pb-16">
           {activeTab === 'image' && <ImageDetector />}
-          {activeTab === 'video' && <VideoDetector />}
+          {activeTab === 'text' && <TextDetector />}
         </main>
       </div>
 
