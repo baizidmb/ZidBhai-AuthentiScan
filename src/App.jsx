@@ -1,0 +1,74 @@
+import React, { useState } from 'react';
+import Header from './components/Header';
+import NavigationTabs from './components/NavigationTabs';
+import TextDetector from './components/TextDetector';
+import ImageDetector from './components/ImageDetector';
+import VideoDetector from './components/VideoDetector';
+import DeveloperModal from './components/DeveloperModal';
+import ApiKeyModal from './components/ApiKeyModal';
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('text');
+  const [isDeveloperModalOpen, setIsDeveloperModalOpen] = useState(false);
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
+      
+      {/* Header Bar */}
+      <div>
+        <Header
+          onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
+          onOpenDeveloperModal={() => setIsDeveloperModalOpen(true)}
+        />
+
+        {/* Tab Navigation Pill Bar */}
+        <NavigationTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+
+        {/* Active Module Panel */}
+        <main className="pb-12">
+          {activeTab === 'text' && <TextDetector />}
+          {activeTab === 'image' && <ImageDetector />}
+          {activeTab === 'video' && <VideoDetector />}
+        </main>
+      </div>
+
+      {/* Footer System */}
+      <footer className="w-full border-t border-slate-800/80 bg-slate-950/90 py-6 px-4 text-center text-xs text-slate-400 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="font-mono">
+            © 2026 ZidBhai AuthentiScan. Powered by Open-Source AI Pipelines. Built & Maintained by <span className="text-cyan-400 font-semibold">Shahidul Islam Baizid (Baizid)</span>.
+          </p>
+
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setIsDeveloperModalOpen(true)}
+              className="text-cyan-400 hover:text-cyan-300 transition-colors font-semibold"
+            >
+              Developer Info
+            </button>
+            <span>•</span>
+            <button
+              onClick={() => setIsApiKeyModalOpen(true)}
+              className="text-slate-400 hover:text-slate-200 transition-colors"
+            >
+              HF API Settings
+            </button>
+          </div>
+        </div>
+      </footer>
+
+      {/* Action Modals */}
+      <DeveloperModal
+        isOpen={isDeveloperModalOpen}
+        onClose={() => setIsDeveloperModalOpen(false)}
+      />
+
+      <ApiKeyModal
+        isOpen={isApiKeyModalOpen}
+        onClose={() => setIsApiKeyModalOpen(false)}
+      />
+
+    </div>
+  );
+}
