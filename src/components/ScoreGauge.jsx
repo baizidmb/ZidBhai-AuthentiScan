@@ -29,7 +29,7 @@ export default function ScoreGauge({ aiScore, humanScore, usedFallback, syntheti
     badgeBg: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40',
     icon: CheckCircle2,
     verdict: 'High Confidence Human',
-    description: 'Natural statistical variance, human phrasing signatures, and organic sentence flow detected.'
+    description: 'Natural camera sensor grain, organic pixel variance, and authentic metadata signature detected.'
   };
 
   if (syntheticMetadataFound) {
@@ -48,7 +48,7 @@ export default function ScoreGauge({ aiScore, humanScore, usedFallback, syntheti
       badgeBg: 'bg-rose-950/80 text-rose-300 border-rose-500/40',
       icon: Cpu,
       verdict: 'Likely AI-Generated',
-      description: 'High uniformity in sentence length, low perplexity, or deep neural model classification.'
+      description: 'High uniformity in sentence length, low perplexity, or deep neural vision model classification.'
     };
   } else if (aiScore >= 35) {
     theme = {
@@ -57,11 +57,11 @@ export default function ScoreGauge({ aiScore, humanScore, usedFallback, syntheti
       badgeBg: 'bg-amber-950/80 text-amber-300 border-amber-500/40',
       icon: AlertTriangle,
       verdict: 'Mixed / Uncertain Origin',
-      description: 'Exhibits hybrid characteristics. May be human text refined by AI grammar tools.'
+      description: 'Exhibits hybrid characteristics. May be human media processed with digital compression or filters.'
     };
   }
 
-  // SVG Gauge calculations
+  // SVG Gauge calculations (fluid scaling with viewBox)
   const size = 180;
   const strokeWidth = 14;
   const radius = (size - strokeWidth) / 2;
@@ -71,22 +71,27 @@ export default function ScoreGauge({ aiScore, humanScore, usedFallback, syntheti
   const IconComponent = theme.icon;
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 rounded-2xl glass-panel relative overflow-hidden border border-slate-800 shadow-2xl">
+    <div className="w-full flex flex-col items-center justify-center p-4 sm:p-6 rounded-2xl glass-panel relative overflow-hidden border border-slate-800 shadow-2xl">
       
       {/* Background radial glow */}
       <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 via-transparent to-violet-500/5 pointer-events-none" />
 
-      {/* Fallback Mode Banner */}
+      {/* Fallback Mode Banner with truncate and flex wrapping to prevent center overlap glitch */}
       {usedFallback && (
-        <div className="mb-4 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-900/80 border border-amber-500/30 text-[11px] text-amber-300 font-mono">
-          <Info className="w-3.5 h-3.5 text-amber-400" />
-          <span>Local Heuristic Engine Active (API Offline/Rate-Limited)</span>
+        <div className="mb-4 max-w-full truncate px-3 py-1 text-xs whitespace-nowrap overflow-hidden flex items-center justify-center space-x-1.5 rounded-full bg-slate-900/90 border border-amber-500/30 text-amber-300 font-mono z-20">
+          <Info className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <span className="truncate">Local Heuristic Engine Active (API Offline/Rate-Limited)</span>
         </div>
       )}
 
-      {/* Radial SVG Score Ring */}
-      <div className={`relative flex items-center justify-center my-2 ${theme.glowColor}`}>
-        <svg width={size} height={size} className="transform -rotate-90">
+      {/* Radial SVG Score Ring with explicit z-10 positioning */}
+      <div className={`relative z-10 flex items-center justify-center my-2 ${theme.glowColor}`}>
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          className="transform -rotate-90 max-w-full h-auto"
+        >
           {/* Track circle */}
           <circle
             cx={size / 2}
@@ -108,33 +113,33 @@ export default function ScoreGauge({ aiScore, humanScore, usedFallback, syntheti
           />
         </svg>
 
-        {/* Center Text inside Gauge */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="text-4xl font-extrabold tracking-tight text-white font-mono">
+        {/* Center Text inside Gauge with explicit z-10 */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-10">
+          <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white font-mono">
             {humanScore}%
           </span>
-          <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 mt-0.5">
+          <span className="text-[10px] sm:text-[11px] uppercase tracking-wider font-semibold text-slate-400 mt-0.5">
             Human Score
           </span>
         </div>
       </div>
 
-      {/* Verdict Status Badge */}
-      <div className={`mt-4 px-4 py-2 rounded-xl border flex items-center space-x-2 font-semibold text-sm shadow-md ${theme.badgeBg}`}>
-        <IconComponent className="w-4 h-4" />
-        <span>{theme.verdict}</span>
+      {/* Verdict Status Badge with relative z-10 */}
+      <div className={`relative z-10 mt-4 px-3.5 py-2 rounded-xl border flex items-center justify-center space-x-2 font-semibold text-xs sm:text-sm shadow-md max-w-full text-center ${theme.badgeBg}`}>
+        <IconComponent className="w-4 h-4 shrink-0" />
+        <span className="truncate">{theme.verdict}</span>
       </div>
 
       {/* Probability Breakdown Bar */}
-      <div className="w-full mt-6 space-y-2">
-        <div className="flex justify-between text-xs font-semibold">
-          <span className="text-emerald-400 flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-            Human Authenticity ({humanScore}%)
+      <div className="w-full mt-6 space-y-2 relative z-10">
+        <div className="flex justify-between text-[11px] sm:text-xs font-semibold gap-1">
+          <span className="text-emerald-400 flex items-center gap-1 truncate">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 inline-block" />
+            Human ({humanScore}%)
           </span>
-          <span className="text-rose-400 flex items-center gap-1">
-            AI Probability ({aiScore}%)
-            <span className="w-2 h-2 rounded-full bg-rose-400 inline-block" />
+          <span className="text-rose-400 flex items-center gap-1 truncate">
+            AI ({aiScore}%)
+            <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0 inline-block" />
           </span>
         </div>
         <div className="w-full h-3 rounded-full bg-slate-900 overflow-hidden border border-slate-800 flex p-0.5">
@@ -150,7 +155,7 @@ export default function ScoreGauge({ aiScore, humanScore, usedFallback, syntheti
       </div>
 
       {/* Technical Summary */}
-      <p className="text-xs text-slate-400 text-center mt-4 max-w-md">
+      <p className="text-xs text-slate-400 text-center mt-4 max-w-md relative z-10 leading-relaxed">
         {theme.description}
       </p>
 

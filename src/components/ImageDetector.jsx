@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Image as ImageIcon, UploadCloud, AlertTriangle, FileCode, CheckCircle2, RefreshCw, ZoomIn, Eye, Sparkles } from 'lucide-react';
+import { Image as ImageIcon, UploadCloud, AlertTriangle, FileCode, CheckCircle2, RefreshCw, Sparkles } from 'lucide-react';
 import ScoreGauge from './ScoreGauge';
 import MetadataViewer from './MetadataViewer';
 import { analyzeImageWithHf } from '../utils/huggingFaceApi';
@@ -78,8 +78,8 @@ export default function ImageDetector() {
           scanResult = await analyzeImageVisualHeuristics(imagePreviewRef.current);
         } else {
           scanResult = {
-            aiScore: metaAudit.aiDetectedInMetadata ? 95 : 30,
-            humanScore: metaAudit.aiDetectedInMetadata ? 5 : 70,
+            aiScore: metaAudit.aiDetectedInMetadata ? 92 : 15,
+            humanScore: metaAudit.aiDetectedInMetadata ? 8 : 85,
             label: metaAudit.aiDetectedInMetadata ? 'Synthetic AI Metadata Found' : 'Likely Authentic Image',
             usedFallback: true
           };
@@ -89,7 +89,7 @@ export default function ImageDetector() {
       setScanProgress(90);
       setScanStep('Finalizing authenticity diagnostics...');
 
-      // Override score if synthetic metadata tag was explicitly found
+      // ONLY override score if explicit synthetic metadata tag was matched
       if (metaAudit.aiDetectedInMetadata) {
         scanResult.aiScore = Math.max(scanResult.aiScore, 92);
         scanResult.humanScore = 100 - scanResult.aiScore;
@@ -116,7 +116,7 @@ export default function ImageDetector() {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div className="w-full max-w-6xl mx-auto px-4 py-4 md:px-6 md:py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
       
       {/* Left Uploader & Image Column (7 cols) */}
       <div className="lg:col-span-7 space-y-4">
@@ -128,7 +128,7 @@ export default function ImageDetector() {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`glass-panel rounded-2xl p-10 border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center text-center cursor-pointer min-h-[320px] ${
+            className={`glass-panel rounded-2xl p-6 sm:p-10 border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center text-center cursor-pointer min-h-[280px] sm:min-h-[320px] ${
               isDragging
                 ? 'border-cyan-400 bg-cyan-950/30 scale-[1.01]'
                 : 'border-slate-800 hover:border-cyan-500/50 hover:bg-slate-900/50'
@@ -142,23 +142,23 @@ export default function ImageDetector() {
               className="hidden"
             />
             
-            <div className="w-16 h-16 rounded-2xl bg-cyan-950/80 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-4 shadow-lg shadow-cyan-500/10">
-              <UploadCloud className="w-8 h-8 animate-bounce" />
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-cyan-950/80 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-4 shadow-lg shadow-cyan-500/10">
+              <UploadCloud className="w-7 h-7 sm:w-8 sm:h-8 animate-bounce" />
             </div>
 
-            <h3 className="text-lg font-bold text-white">Drop image here or click to browse</h3>
-            <p className="text-xs text-slate-400 mt-1 max-w-sm">
+            <h3 className="text-base sm:text-lg font-bold text-white">Drop image here or click to browse</h3>
+            <p className="text-xs text-slate-400 mt-1 max-w-sm leading-relaxed">
               Supports PNG, JPEG, WebP. Performs EXIF C2PA metadata audit and deep visual scan for DALL-E, Midjourney, & Stable Diffusion signatures.
             </p>
           </div>
         ) : (
           /* Image Preview & Scan Grid */
-          <div className="glass-panel rounded-2xl p-5 border border-slate-800 shadow-xl space-y-4">
+          <div className="glass-panel rounded-2xl p-4 sm:p-5 border border-slate-800 shadow-xl space-y-4">
             
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center space-x-2">
-                <ImageIcon className="w-5 h-5 text-cyan-400" />
-                <span className="text-sm font-bold text-white truncate max-w-[200px]">
+            <div className="flex flex-wrap items-center justify-between pb-3 border-b border-slate-800 gap-2">
+              <div className="flex items-center space-x-2 min-w-0">
+                <ImageIcon className="w-5 h-5 text-cyan-400 shrink-0" />
+                <span className="text-xs sm:text-sm font-bold text-white truncate max-w-[180px] sm:max-w-[240px]">
                   {selectedFile?.name}
                 </span>
               </div>
@@ -167,7 +167,7 @@ export default function ImageDetector() {
                 {metadata && (
                   <button
                     onClick={() => setIsMetadataDrawerOpen(true)}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                    className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-semibold flex items-center gap-1.5 transition-colors min-h-[40px]"
                   >
                     <FileCode className="w-4 h-4" /> Metadata Audit
                   </button>
@@ -175,7 +175,7 @@ export default function ImageDetector() {
                 
                 <button
                   onClick={handleReset}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors min-h-[40px]"
                 >
                   Change File
                 </button>
@@ -183,12 +183,12 @@ export default function ImageDetector() {
             </div>
 
             {/* Preview Image Frame with Scan Overlay */}
-            <div className="relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center max-h-[400px]">
+            <div className="relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center max-h-[380px]">
               <img
                 ref={imagePreviewRef}
                 src={previewUrl}
                 alt="Upload preview"
-                className="max-h-[380px] w-auto object-contain rounded-lg"
+                className="max-h-[360px] w-auto object-contain rounded-lg"
               />
 
               {/* Animated Scan Grid Overlay */}
@@ -221,7 +221,7 @@ export default function ImageDetector() {
             {!result && !isScanning && (
               <button
                 onClick={handleRunScan}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 via-teal-400 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center space-x-2"
+                className="w-full min-h-[48px] py-3 rounded-xl bg-gradient-to-r from-cyan-500 via-teal-400 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center space-x-2 text-sm"
               >
                 <Sparkles className="w-5 h-5 fill-slate-950" />
                 <span>Execute Deep Image Authenticity Scan</span>
@@ -256,34 +256,34 @@ export default function ImageDetector() {
             {metadata && (
               <div className="glass-panel rounded-2xl p-4 border border-slate-800 space-y-2 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-mono">Software Signature:</span>
-                  <span className="font-semibold text-slate-200">
-                    {metadata.softwareTag || 'None (Stripped)'}
+                  <span className="text-slate-400 font-mono">Software Tag:</span>
+                  <span className="font-semibold text-slate-200 truncate max-w-[180px]">
+                    {metadata.softwareTag || 'None (Clean / Stripped)'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-mono">Camera EXIF Model:</span>
-                  <span className="font-semibold text-slate-200">
+                  <span className="text-slate-400 font-mono">Camera Model:</span>
+                  <span className="font-semibold text-slate-200 truncate max-w-[180px]">
                     {metadata.cameraModel || 'No Hardware Tag'}
                   </span>
                 </div>
                 <div className="pt-2 border-t border-slate-800 flex justify-end">
                   <button
                     onClick={() => setIsMetadataDrawerOpen(true)}
-                    className="text-xs text-cyan-400 hover:underline font-semibold flex items-center gap-1"
+                    className="text-xs text-cyan-400 hover:underline font-semibold flex items-center gap-1 min-h-[36px]"
                   >
-                    View Full Metadata Inspection Log →
+                    View Full Metadata Log →
                   </button>
                 </div>
               </div>
             )}
           </>
         ) : (
-          <div className="glass-panel rounded-2xl p-8 border border-slate-800/80 text-center flex flex-col items-center justify-center min-h-[380px] shadow-xl">
-            <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-4 text-cyan-400 shadow-inner">
-              <ImageIcon className="w-8 h-8" />
+          <div className="glass-panel rounded-2xl p-6 sm:p-8 border border-slate-800/80 text-center flex flex-col items-center justify-center min-h-[280px] sm:min-h-[380px] shadow-xl">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-4 text-cyan-400 shadow-inner">
+              <ImageIcon className="w-7 h-7 sm:w-8 sm:h-8" />
             </div>
-            <h3 className="text-lg font-bold text-white">Awaiting Image Payload</h3>
+            <h3 className="text-base sm:text-lg font-bold text-white">Awaiting Image Payload</h3>
             <p className="text-xs text-slate-400 mt-2 max-w-xs leading-relaxed">
               Upload an image to audit EXIF signatures and run vision neural pipeline inference.
             </p>

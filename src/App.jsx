@@ -25,8 +25,8 @@ export default function App() {
         {/* Tab Navigation Pill Bar */}
         <NavigationTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
-        {/* Active Module Panel */}
-        <main className="pb-12">
+        {/* Active Module Panel with mobile-first container padding */}
+        <main className="px-4 py-6 md:px-8 md:py-10 pb-16">
           {activeTab === 'text' && <TextDetector />}
           {activeTab === 'image' && <ImageDetector />}
           {activeTab === 'video' && <VideoDetector />}
@@ -34,23 +34,23 @@ export default function App() {
       </div>
 
       {/* Footer System */}
-      <footer className="w-full border-t border-slate-800/80 bg-slate-950/90 py-6 px-4 text-center text-xs text-slate-400 backdrop-blur-md">
+      <footer className="w-full border-t border-slate-800/80 bg-slate-950/90 py-6 px-4 md:px-8 text-center text-xs text-slate-400 backdrop-blur-md">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="font-mono">
+          <p className="font-mono text-center sm:text-left leading-relaxed">
             © 2026 ZidBhai AuthentiScan. Powered by Open-Source AI Pipelines. Built & Maintained by <span className="text-cyan-400 font-semibold">Shahidul Islam Baizid (Baizid)</span>.
           </p>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 shrink-0">
             <button
               onClick={() => setIsDeveloperModalOpen(true)}
-              className="text-cyan-400 hover:text-cyan-300 transition-colors font-semibold"
+              className="text-cyan-400 hover:text-cyan-300 transition-colors font-semibold min-h-[44px] flex items-center"
             >
               Developer Info
             </button>
             <span>•</span>
             <button
               onClick={() => setIsApiKeyModalOpen(true)}
-              className="text-slate-400 hover:text-slate-200 transition-colors"
+              className="text-slate-400 hover:text-slate-200 transition-colors min-h-[44px] flex items-center"
             >
               HF API Settings
             </button>
