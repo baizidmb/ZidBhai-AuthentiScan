@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Image as ImageIcon, UploadCloud, AlertTriangle, FileCode, RefreshCw, Sparkles } from 'lucide-react';
+import { Image as ImageIcon, UploadCloud, AlertTriangle, FileCode, RefreshCw, Sparkles, Award } from 'lucide-react';
 import ScoreGauge from './ScoreGauge';
 import MetadataViewer from './MetadataViewer';
+import VerificationReportModal from './VerificationReportModal';
 import { analyzeImageWithHf } from '../utils/huggingFaceApi';
 import { auditImageMetadata, analyzeImageVisualHeuristics } from '../utils/imageAnalysis';
 
@@ -14,6 +15,7 @@ export default function ImageDetector() {
   const [result, setResult] = useState(null);
   const [metadata, setMetadata] = useState(null);
   const [isMetadataDrawerOpen, setIsMetadataDrawerOpen] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
 
@@ -75,7 +77,7 @@ export default function ImageDetector() {
         scanResult = {
           ...hfResult,
           explanations: [
-            `Hugging Face SigLIP Classification: ${hfResult.aiScore}% AI probability.`,
+            `Hugging Face SigLIP Vision Classification: ${hfResult.aiScore}% AI probability.`,
             ...localVisual.explanations
           ]
         };
@@ -256,22 +258,13 @@ export default function ImageDetector() {
               explanations={result.explanations}
             />
 
-            {metadata && (
-              <div className="glass-panel rounded-2xl p-4 border border-slate-800 space-y-2 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-mono">Software Tag:</span>
-                  <span className="font-semibold text-slate-200 truncate max-w-[180px]">
-                    {metadata.softwareTag || 'None (Clean / Web Graphic)'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-mono">Camera Hardware:</span>
-                  <span className="font-semibold text-slate-200 truncate max-w-[180px]">
-                    {metadata.cameraModel || 'No Hardware Header'}
-                  </span>
-                </div>
-              </div>
-            )}
+            <button
+              onClick={() => setShowReportModal(true)}
+              className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-cyan-500/40 text-cyan-300 font-bold text-xs transition-all flex items-center justify-center space-x-2 shadow-lg"
+            >
+              <Award className="w-4 h-4 text-cyan-400" />
+              <span>Download Official Verification Audit Certificate</span>
+            </button>
           </>
         ) : (
           <div className="glass-panel rounded-2xl p-6 sm:p-8 border border-slate-800/80 text-center flex flex-col items-center justify-center min-h-[280px] sm:min-h-[380px] shadow-xl">
@@ -290,6 +283,14 @@ export default function ImageDetector() {
         metadata={metadata}
         isOpen={isMetadataDrawerOpen}
         onClose={() => setIsMetadataDrawerOpen(false)}
+      />
+
+      <VerificationReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        resultData={result}
+        payloadType="image"
+        payloadName={selectedFile?.name || 'Image'}
       />
 
     </div>
