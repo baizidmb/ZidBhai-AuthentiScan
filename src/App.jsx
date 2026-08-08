@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import Header from './components/Header';
 import NavigationTabs from './components/NavigationTabs';
-import TextDetector from './components/TextDetector';
 import ImageDetector from './components/ImageDetector';
+import TextDetector from './components/TextDetector';
+import PdfFileDetector from './components/PdfFileDetector';
+import PlagiarismChecker from './components/PlagiarismChecker';
 import DeveloperModal from './components/DeveloperModal';
 import ApiKeyModal from './components/ApiKeyModal';
+import { Cpu, ShieldCheck } from 'lucide-react';
 
 export default function App() {
-  // Default to 'image' tab on home screen load
   const [activeTab, setActiveTab] = useState('image');
   const [isDeveloperModalOpen, setIsDeveloperModalOpen] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
@@ -22,13 +24,27 @@ export default function App() {
           onOpenDeveloperModal={() => setIsDeveloperModalOpen(true)}
         />
 
-        {/* Tab Navigation Bar (Default Image Tab) */}
+        {/* Multi-Model Evaluated Target Badge Matrix */}
+        <div className="max-w-7xl mx-auto px-4 pt-3 pb-1 flex flex-wrap items-center justify-center gap-2 text-[11px] font-mono text-slate-400">
+          <span className="text-slate-500 font-semibold uppercase tracking-wider flex items-center gap-1">
+            <Cpu className="w-3.5 h-3.5 text-cyan-400" /> Target AI Models Evaluated:
+          </span>
+          {['ChatGPT 4o/5', 'Claude 3.5', 'Gemini 1.5 Pro', 'DeepSeek V3', 'Midjourney v6', 'DALL-E 3', 'Flux.1', 'Stable Diffusion'].map((model, i) => (
+            <span key={i} className="px-2 py-0.5 rounded-full bg-slate-900/90 border border-slate-800 text-cyan-300 font-medium">
+              {model}
+            </span>
+          ))}
+        </div>
+
+        {/* Tab Navigation Bar (Default Image Detector) */}
         <NavigationTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
         {/* Active Module Panel */}
-        <main className="px-3 py-4 md:px-8 md:py-8 pb-16">
+        <main className="px-2 sm:px-4 py-4 md:px-8 md:py-8 pb-16">
           {activeTab === 'image' && <ImageDetector />}
           {activeTab === 'text' && <TextDetector />}
+          {activeTab === 'pdf' && <PdfFileDetector />}
+          {activeTab === 'plagiarism' && <PlagiarismChecker />}
         </main>
       </div>
 
@@ -36,7 +52,7 @@ export default function App() {
       <footer className="w-full border-t border-slate-800/80 bg-slate-950/90 py-6 px-4 md:px-8 text-center text-xs text-slate-400 backdrop-blur-md">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="font-mono text-center sm:text-left leading-relaxed">
-            © 2026 ZidBhai AuthentiScan. Powered by Open-Source AI Pipelines. Built & Maintained by <span className="text-cyan-400 font-semibold">Shahidul Islam Baizid (Baizid)</span>.
+            © 2026 ZidBhai ZeroGPT Suite. Powered by Open-Source AI Pipelines. Built & Maintained by <span className="text-cyan-400 font-semibold">Shahidul Islam Baizid (Baizid)</span>.
           </p>
 
           <div className="flex items-center space-x-4 shrink-0">
@@ -51,13 +67,13 @@ export default function App() {
               onClick={() => setIsApiKeyModalOpen(true)}
               className="text-slate-400 hover:text-slate-200 transition-colors min-h-[44px] flex items-center"
             >
-              HF API Settings
+              API Credentials
             </button>
           </div>
         </div>
       </footer>
 
-      {/* Action Modals */}
+      {/* Modals */}
       <DeveloperModal
         isOpen={isDeveloperModalOpen}
         onClose={() => setIsDeveloperModalOpen(false)}
