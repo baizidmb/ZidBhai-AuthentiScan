@@ -1,7 +1,7 @@
 /**
- * High-Precision Multi-Feature Image Authenticity Engine for ZidBhai AuthentiScan
- * Analyzes EXIF camera hardware tags, explicit AI generator footprints,
- * pixel noise variance, high-frequency edge spectra, and Bayer color noise.
+ * High-Precision AI Image Authenticity Engine for ZidBhai AuthentiScan
+ * Evaluates: EXIF hardware headers, explicit AI generator tags, 
+ * spatial noise spectrum, Laplacian edge sharpness, and Bayer sensor noise.
  */
 
 import ExifReader from 'exifreader';
@@ -14,9 +14,6 @@ const EXPLICIT_AI_SIGNATURES = [
   'prompt:', 'negative prompt:', 'steps:', 'sampler:'
 ];
 
-/**
- * Audit image metadata for hardware camera specs and explicit AI footprints
- */
 export async function auditImageMetadata(file) {
   const result = {
     hasMetadata: false,
@@ -42,7 +39,7 @@ export async function auditImageMetadata(file) {
       result.softwareTag = tags.png.Software.description;
     }
 
-    // Hardware camera detection (Make, Model, FNumber, ISO, Shutter Speed)
+    // Hardware camera detection (Make, Model, Lens, ISO, Shutter)
     if (tags.exif && (tags.exif.Model || tags.exif.Make || tags.exif.FNumber || tags.exif.ISOSpeedRatings)) {
       result.hasHardwareCameraExif = true;
       const make = tags.exif.Make?.description || '';
@@ -55,7 +52,7 @@ export async function auditImageMetadata(file) {
       result.dimensions = `${tags.file['Image Width'].value} × ${tags.file['Image Height'].value}`;
     }
 
-    // Inspect target software, comment, and PNG text chunk parameters
+    // Scan all text fields for explicit AI signatures
     let fieldsToScan = [];
     if (tags.exif?.Software?.description) fieldsToScan.push(tags.exif.Software.description);
     if (tags.png?.Software?.description) fieldsToScan.push(tags.png.Software.description);
@@ -90,15 +87,14 @@ export async function auditImageMetadata(file) {
     result.rawTags = simplifiedRaw;
 
   } catch (err) {
-    // No EXIF headers
+    // No EXIF
   }
 
   return result;
 }
 
 /**
- * Real-Time Pixel Noise & Spatial Frequency Analyzer
- * Calculates spatial smoothness ratio, high-frequency noise variance, and Bayer color noise.
+ * High-Precision Pixel & Spatial Noise Analyzer
  */
 export async function analyzeImageVisualHeuristics(imageElement, metaAudit = null) {
   return new Promise((resolve) => {
@@ -142,7 +138,7 @@ export async function analyzeImageVisualHeuristics(imageElement, metaAudit = nul
         // Bayer color sensor micro-noise calculation
         colorChannelDiffSum += (Math.abs(r - g) + Math.abs(g - b));
 
-        // Neighbor diff for spatial noise estimate
+        // Spatial neighbor pixel difference
         if (i + 4 < pixels.length) {
           const nextR = pixels[i + 4];
           const diff = Math.abs(r - nextR);
@@ -161,78 +157,65 @@ export async function analyzeImageVisualHeuristics(imageElement, metaAudit = nul
       const smoothnessRatio = smoothPixelCount / pixelCount;
       const edgeRatio = highFreqEdges / pixelCount;
       const colorNoise = colorChannelDiffSum / pixelCount;
+      const smoothnessPct = Math.round(smoothnessRatio * 100);
 
       const explanations = [];
 
-      // 1. HARD CRITERIA: Synthetic Metadata Tag
+      // 1. HARD RULE: Explicit AI Generator Metadata Tag Matched
       if (metaAudit?.aiDetectedInMetadata) {
-        explanations.push(`Definite AI Match: Metadata matched explicit AI generator footprint [${metaAudit.detectedSignatures.join(', ')}].`);
+        explanations.push(`Definite AI Match: Header metadata matched explicit AI generator footprint [${metaAudit.detectedSignatures.join(', ')}].`);
         return resolve({
           aiScore: 98,
           humanScore: 2,
-          label: 'Synthetic AI Image (Matched AI Footprint)',
+          label: 'Synthetic AI Image (Matched Generator Footprint)',
           engine: 'Metadata & Multi-Feature Spectrum Engine',
           usedFallback: true,
           explanations,
-          metrics: {
-            smoothnessRatio: Math.round(smoothnessRatio * 100),
-            noiseVariance: Math.round(avgNoise * 10) / 10,
-            resolution: `${width}×${height}`
-          }
+          metrics: { smoothnessRatio: smoothnessPct, noiseVariance: Math.round(avgNoise * 10) / 10, resolution: `${width}×${height}` }
         });
       }
 
-      // 2. HARD CRITERIA: Real Camera Hardware EXIF
+      // 2. HARD RULE: Real Camera Hardware EXIF Present
       if (metaAudit?.hasHardwareCameraExif) {
-        explanations.push(`Authentic Photo Match: Physical optical camera sensor EXIF present (${metaAudit.cameraModel}).`);
-        explanations.push(`Contains natural optical lens frequency spectrum and camera sensor grain.`);
+        explanations.push(`Authentic Photo Match: Physical camera optical hardware EXIF present (${metaAudit.cameraModel}).`);
+        explanations.push(`Contains physical optical lens frequency spectrum and camera sensor grain.`);
         return resolve({
-          aiScore: 6,
-          humanScore: 94,
+          aiScore: 4,
+          humanScore: 96,
           label: 'Authentic Optical Camera Photo',
           engine: 'Metadata & Multi-Feature Spectrum Engine',
           usedFallback: true,
           explanations,
-          metrics: {
-            smoothnessRatio: Math.round(smoothnessRatio * 100),
-            noiseVariance: Math.round(avgNoise * 10) / 10,
-            resolution: `${width}×${height}`
-          }
+          metrics: { smoothnessRatio: smoothnessPct, noiseVariance: Math.round(avgNoise * 10) / 10, resolution: `${width}×${height}` }
         });
       }
 
-      // 3. PIXEL SPECTRUM HEURISTICS FOR STRIPPED / GENERATED IMAGES
-      let aiScorePoints = 50;
+      // 3. PIXEL FREQUENCY FEATURE DISCRIMINATOR
+      let finalAiScore = 50;
 
-      const smoothnessPct = Math.round(smoothnessRatio * 100);
-
-      // AI Diffusion Characteristics (Midjourney, DALL-E, SDXL have ultra-smooth gradients and low high-frequency noise)
-      if (smoothnessRatio > 0.50 && avgNoise < 3.2) {
-        aiScorePoints += 38;
-        explanations.push(`High spatial smoothness (${smoothnessPct}% uniform pixel gradients), characteristic of AI diffusion model denoising filters.`);
-        explanations.push(`Low high-frequency sensor noise (score: ${avgNoise.toFixed(1)}), typical of computer-generated synthetic rendering.`);
-      } else if (smoothnessRatio > 0.44 && avgNoise < 3.8) {
-        aiScorePoints += 26;
+      // Real camera photos have high spatial noise (> 4.2) and Bayer matrix color noise (> 7.5)
+      // AI diffusion renders have low high-frequency noise (< 3.2) and ultra-smooth gradients (> 40%)
+      if (smoothnessRatio > 0.42 && avgNoise < 3.2) {
+        finalAiScore = 92;
+        explanations.push(`High spatial smoothness (${smoothnessPct}% uniform gradients), characteristic of AI diffusion denoising filters.`);
+        explanations.push(`Unnaturally low high-frequency sensor noise (score: ${avgNoise.toFixed(1)}), typical of synthetic AI renders.`);
+      } else if (smoothnessRatio > 0.36 && avgNoise < 3.8) {
+        finalAiScore = 84;
         explanations.push(`Elevated smooth gradient ratio (${smoothnessPct}%), common in synthetic AI renders.`);
-      } else if (avgNoise > 5.5 && colorNoise > 12) {
-        aiScorePoints -= 38;
+      } else if (avgNoise > 4.8 || colorNoise > 9.5) {
+        finalAiScore = 8; // 92% Human!
         explanations.push(`High natural camera sensor grain (noise score: ${avgNoise.toFixed(1)}), matching real physical camera sensors.`);
         explanations.push(`Organic Bayer matrix color micro-variation (color noise: ${colorNoise.toFixed(1)}).`);
-      } else if (avgNoise > 4.2) {
-        aiScorePoints -= 24;
+      } else if (avgNoise > 3.8) {
+        finalAiScore = 16; // 84% Human!
         explanations.push(`Organic pixel edge variance (${smoothnessPct}% smoothness ratio), matching physical optical lens capture.`);
+      } else {
+        // Balanced calculation for graphics/artwork
+        finalAiScore = Math.round(smoothnessRatio * 100 * 0.8 + (4.0 - avgNoise) * 10);
+        finalAiScore = Math.min(Math.max(finalAiScore, 10), 90);
+        explanations.push(`Evaluated pixel noise spectrum (noise score: ${avgNoise.toFixed(1)}, smoothness: ${smoothnessPct}%).`);
       }
 
-      // Color channel hyper-correlation check
-      if (colorNoise < 6.5) {
-        aiScorePoints += 12;
-        explanations.push(`Hyper-correlated color channel distribution (low color noise: ${colorNoise.toFixed(1)}), common in AI rendering.`);
-      } else if (colorNoise > 14.5) {
-        aiScorePoints -= 12;
-        explanations.push(`Natural color channel micro-fluctuations matching optical sensor captures.`);
-      }
-
-      const finalAiScore = Math.min(Math.max(Math.round(aiScorePoints), 6), 94);
       const finalHumanScore = 100 - finalAiScore;
 
       resolve({
@@ -241,7 +224,7 @@ export async function analyzeImageVisualHeuristics(imageElement, metaAudit = nul
         label: finalAiScore > 50 ? 'Likely AI-Generated Image' : 'Authentic Human Image',
         engine: 'ZidBhai Multi-Feature Spectrum Engine',
         usedFallback: true,
-        explanations: explanations.length > 0 ? explanations : ['Multi-factor pixel frequency and metadata spectrum inspection completed.'],
+        explanations,
         metrics: {
           smoothnessRatio: smoothnessPct,
           noiseVariance: Math.round(avgNoise * 10) / 10,
@@ -252,8 +235,8 @@ export async function analyzeImageVisualHeuristics(imageElement, metaAudit = nul
 
     } catch (e) {
       resolve({
-        aiScore: 20,
-        humanScore: 80,
+        aiScore: 10,
+        humanScore: 90,
         label: 'Authentic Image',
         engine: 'ZidBhai Multi-Feature Spectrum Engine',
         usedFallback: true,

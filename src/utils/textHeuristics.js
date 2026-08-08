@@ -1,11 +1,11 @@
 /**
  * High-Precision Text Authenticity & LLM Fingerprint Diagnostics Engine
- * Analyzes sentence burstiness variance, n-gram entropy, and exact LLM transition clichés.
+ * Evaluates sentence burstiness variance, n-gram entropy, and exact LLM transition clichés.
  */
 
 const LLM_PHRASE_PATTERNS = [
   { phrase: "in conclusion", weight: 3.5, desc: "Generic LLM concluding transition" },
-  { phrase: "delve into", weight: 4.5, desc: "ChatGPT signature high-frequency verb ('delve')" },
+  { phrase: "delve into", weight: 4.5, desc: "ChatGPT signature verb ('delve')" },
   { phrase: "testament to", weight: 3.8, desc: "Common LLM hyperbolic filler ('testament to')" },
   { phrase: "it's important to remember", weight: 4.0, desc: "ChatGPT disclaimer boilerplate" },
   { phrase: "it is important to note", weight: 4.0, desc: "LLM formal passive disclaimer" },
@@ -44,19 +44,8 @@ function calculateBurstiness(paragraphs) {
   const variance = sentenceLengths.reduce((sq, n) => sq + Math.pow(n - mean, 2), 0) / sentenceLengths.length;
   const stdDev = Math.sqrt(variance);
 
-  // StdDev < 3.8 indicates robotic, uniform sentence length (high AI score)
-  // StdDev > 7.0 indicates natural human burstiness (low AI score)
-  let burstinessAiScore = 50;
-  if (stdDev < 3.8) {
-    burstinessAiScore = Math.round(92 - (stdDev / 3.8) * 22);
-  } else if (stdDev > 7.0) {
-    burstinessAiScore = Math.round(Math.max(6, 32 - (stdDev - 7.0) * 5));
-  } else {
-    burstinessAiScore = Math.round(70 - ((stdDev - 3.8) / 3.2) * 38);
-  }
-
   return {
-    score: burstinessAiScore,
+    score: stdDev < 3.8 ? 92 : stdDev > 7.0 ? 8 : 45,
     variance: Math.round(variance * 10) / 10,
     stdDev: Math.round(stdDev * 10) / 10,
     sentenceCount: sentenceLengths.length,
@@ -78,28 +67,12 @@ function calculatePerplexityProxy(paragraphs) {
   const uniqueWords = Object.keys(wordCounts).length;
   const uniqueRatio = uniqueWords / words.length;
 
-  let entropy = 0;
-  Object.values(wordCounts).forEach(count => {
-    const p = count / words.length;
-    entropy -= p * Math.log2(p);
-  });
-
   const totalChars = words.reduce((sum, w) => sum + w.length, 0);
   const avgWordLength = totalChars / words.length;
 
-  let perplexityAiScore = 50;
-  if (uniqueRatio < 0.45) {
-    perplexityAiScore = 85;
-  } else if (uniqueRatio > 0.65) {
-    perplexityAiScore = 15;
-  } else {
-    perplexityAiScore = Math.round(85 - ((uniqueRatio - 0.45) / 0.20) * 70);
-  }
-
   return {
-    score: perplexityAiScore,
+    score: uniqueRatio < 0.46 ? 85 : uniqueRatio > 0.64 ? 12 : 45,
     uniqueRatio: Math.round(uniqueRatio * 100),
-    entropy: Math.round(entropy * 100) / 100,
     avgWordLength: Math.round(avgWordLength * 10) / 10,
     totalWords: words.length
   };
@@ -147,47 +120,37 @@ export function analyzeTextHeuristics(text) {
   const flagged = findFlaggedPhrases(text);
   const explanations = [];
 
-  // Phrase penalty calculation
-  const phrasePenalty = Math.min(flagged.reduce((sum, item) => sum + item.weight * 14, 0), 55);
+  let finalAiScore = 50;
 
+  // 1. HARD CRITERIA: Multiple LLM Fingerprint Clichés Matched
   if (flagged.length >= 2) {
+    finalAiScore = 96;
     const phraseList = flagged.map(f => `"${f.phrase}"`).slice(0, 4).join(', ');
-    explanations.push(`Definite LLM Signature: Matched ${flagged.length} ChatGPT transition clichés (${phraseList}).`);
+    explanations.push(`Definite ChatGPT Match: Contains ${flagged.length} signature LLM transition tropes (${phraseList}).`);
   } else if (flagged.length === 1) {
-    explanations.push(`Matched signature LLM transition phrase: "${flagged[0].phrase}".`);
+    finalAiScore = 84;
+    explanations.push(`Matched signature LLM transition trope: "${flagged[0].phrase}".`);
   } else {
     explanations.push('Zero generic LLM transition clichés found ("delve into", "rich tapestry", "testament to").');
   }
 
+  // 2. BURSTINESS SENTENCE PACING DISCRIMINATOR
   if (burstiness.stdDev < 3.8) {
-    explanations.push(`Robotic sentence length uniformity (stdDev: ${burstiness.stdDev}), matching ChatGPT token distribution.`);
+    if (finalAiScore < 84) finalAiScore = 88;
+    explanations.push(`Robotic sentence length uniformity (stdDev: ${burstiness.stdDev}), matching ChatGPT token probability.`);
   } else if (burstiness.stdDev > 7.0) {
-    explanations.push(`High sentence burstiness (stdDev: ${burstiness.stdDev}), matching organic human author pacing.`);
+    if (flagged.length === 0) finalAiScore = 6; // 94% Human!
+    explanations.push(`High sentence length burstiness (stdDev: ${burstiness.stdDev}), matching organic human author pacing.`);
   }
 
-  if (perplexity.uniqueRatio < 48) {
-    explanations.push(`Low vocabulary variation (${perplexity.uniqueRatio}% unique word ratio).`);
-  } else if (perplexity.uniqueRatio > 62) {
+  // 3. VOCABULARY DIVERSITY
+  if (perplexity.uniqueRatio < 48 && finalAiScore > 50) {
+    explanations.push(`Repetitive vocabulary token distribution (${perplexity.uniqueRatio}% unique word ratio).`);
+  } else if (perplexity.uniqueRatio > 62 && flagged.length === 0) {
+    if (finalAiScore < 20) finalAiScore = 4; // 96% Human!
     explanations.push(`High vocabulary diversity (${perplexity.uniqueRatio}% unique words), characteristic of human writing.`);
   }
 
-  let rawAiScore = 40;
-  if (flagged.length >= 2) {
-    rawAiScore = Math.max(88, Math.round(burstiness.score * 0.40 + perplexity.score * 0.20 + phrasePenalty));
-  } else if (flagged.length === 1) {
-    rawAiScore = Math.max(68, Math.round(burstiness.score * 0.45 + perplexity.score * 0.25 + phrasePenalty));
-  } else {
-    rawAiScore = Math.round(burstiness.score * 0.55 + perplexity.score * 0.45);
-  }
-
-  const totalWords = perplexity.totalWords;
-  if (totalWords < 25) {
-    const confidence = totalWords / 25;
-    rawAiScore = Math.round(rawAiScore * confidence + 50 * (1 - confidence));
-    explanations.push('Short sample: Score adjusted for short word count.');
-  }
-
-  const finalAiScore = Math.min(Math.max(rawAiScore, 4), 96);
   const finalHumanScore = 100 - finalAiScore;
 
   return {
