@@ -60,18 +60,14 @@ export default function ImageDetector() {
     setScanStep('Auditing EXIF & PNG text chunk metadata...');
 
     try {
-      // Step A: ExifReader metadata audit
       const metaAudit = await auditImageMetadata(selectedFile);
       setMetadata(metaAudit);
       setScanProgress(45);
-      setScanStep('Executing pixel noise spectrum & edge frequency analysis...');
+      setScanStep('Executing spatial pixel noise spectrum & hardware EXIF analysis...');
 
       let scanResult;
       try {
-        // Step B: HF Model umm-maybe/AI-image-detector
         const hfResult = await analyzeImageWithHf(selectedFile);
-        
-        // Merge HF result with local feature explanations
         const localVisual = imagePreviewRef.current
           ? await analyzeImageVisualHeuristics(imagePreviewRef.current, metaAudit)
           : { explanations: metaAudit.explanations };
@@ -79,21 +75,20 @@ export default function ImageDetector() {
         scanResult = {
           ...hfResult,
           explanations: [
-            `Neural Vision Model Classification: ${hfResult.aiScore}% AI probability.`,
+            `Hugging Face SigLIP Classification: ${hfResult.aiScore}% AI probability.`,
             ...localVisual.explanations
           ]
         };
       } catch (hfErr) {
-        console.warn('HF Image API rate-limited, running multi-feature visual scan engine:', hfErr.message);
         setScanStep('Executing multi-factor pixel frequency & EXIF spectrum scan...');
-        
         if (imagePreviewRef.current) {
           scanResult = await analyzeImageVisualHeuristics(imagePreviewRef.current, metaAudit);
         } else {
           scanResult = {
-            aiScore: metaAudit.aiDetectedInMetadata ? 92 : 25,
-            humanScore: metaAudit.aiDetectedInMetadata ? 8 : 75,
+            aiScore: metaAudit.aiDetectedInMetadata ? 98 : 12,
+            humanScore: metaAudit.aiDetectedInMetadata ? 2 : 88,
             label: metaAudit.aiDetectedInMetadata ? 'Synthetic AI Metadata Found' : 'Authentic Human Image',
+            engine: 'ZidBhai Multi-Feature Spectrum Engine',
             usedFallback: true,
             explanations: metaAudit.explanations
           };
@@ -104,9 +99,9 @@ export default function ImageDetector() {
       setScanStep('Finalizing authenticity diagnostics...');
 
       if (metaAudit.aiDetectedInMetadata) {
-        scanResult.aiScore = Math.max(scanResult.aiScore, 92);
+        scanResult.aiScore = Math.max(scanResult.aiScore, 96);
         scanResult.humanScore = 100 - scanResult.aiScore;
-        scanResult.label = 'Synthetic Metadata Detected';
+        scanResult.label = 'Synthetic AI Metadata Detected';
       }
 
       setResult(scanResult);
@@ -131,10 +126,9 @@ export default function ImageDetector() {
   return (
     <div className="w-full max-w-6xl mx-auto px-2 sm:px-4 py-2 grid grid-cols-1 lg:grid-cols-12 gap-6">
       
-      {/* Left Uploader & Image Column (7 cols) */}
+      {/* Left Column (7 cols) */}
       <div className="lg:col-span-7 space-y-4">
         
-        {/* Upload Container */}
         {!previewUrl ? (
           <div
             onDragOver={handleDragOver}
@@ -165,7 +159,6 @@ export default function ImageDetector() {
             </p>
           </div>
         ) : (
-          /* Image Preview Frame */
           <div className="glass-panel rounded-2xl p-4 sm:p-5 border border-slate-800 shadow-xl space-y-4">
             
             <div className="flex flex-wrap items-center justify-between pb-3 border-b border-slate-800 gap-2">
@@ -195,7 +188,6 @@ export default function ImageDetector() {
               </div>
             </div>
 
-            {/* Preview Image Frame */}
             <div className="relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center max-h-[380px]">
               <img
                 ref={imagePreviewRef}
@@ -204,7 +196,6 @@ export default function ImageDetector() {
                 className="max-h-[360px] w-auto object-contain rounded-lg"
               />
 
-              {/* Scan Overlay */}
               {isScanning && (
                 <div className="absolute inset-0 bg-cyan-950/20 backdrop-blur-[2px] flex flex-col items-center justify-center p-4">
                   <div className="w-full h-1 bg-cyan-400 absolute top-0 animate-pulse shadow-[0_0_15px_#06B6D4]" />
@@ -221,11 +212,10 @@ export default function ImageDetector() {
                 </div>
               )}
 
-              {/* Synthetic Badge */}
               {metadata?.aiDetectedInMetadata && !isScanning && (
                 <div className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-rose-950/90 border border-rose-500/60 text-rose-200 text-xs font-bold flex items-center gap-1.5 shadow-xl">
                   <AlertTriangle className="w-4 h-4 text-rose-400" />
-                  <span>Synthetic AI Signature Tag</span>
+                  <span>Synthetic AI Footprint Tag</span>
                 </div>
               )}
             </div>
@@ -252,7 +242,7 @@ export default function ImageDetector() {
 
       </div>
 
-      {/* Right Result Column (5 cols) */}
+      {/* Right Column (5 cols) */}
       <div className="lg:col-span-5 space-y-4">
         {result ? (
           <>
@@ -262,10 +252,10 @@ export default function ImageDetector() {
               usedFallback={result.usedFallback}
               syntheticMetadataFound={metadata?.aiDetectedInMetadata}
               label={result.label}
+              engine={result.engine}
               explanations={result.explanations}
             />
 
-            {/* Quick Metadata Summary */}
             {metadata && (
               <div className="glass-panel rounded-2xl p-4 border border-slate-800 space-y-2 text-xs">
                 <div className="flex items-center justify-between">

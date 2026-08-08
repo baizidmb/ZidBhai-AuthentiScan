@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
-import { ShieldCheck, AlertTriangle, Cpu, CheckCircle2, Info, HelpCircle, Check, Sparkles } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, Cpu, CheckCircle2, Info, Sparkles, Server } from 'lucide-react';
 
-export default function ScoreGauge({ aiScore, humanScore, usedFallback, syntheticMetadataFound, label, explanations = [] }) {
+export default function ScoreGauge({ aiScore, humanScore, usedFallback, syntheticMetadataFound, label, engine = 'ZidBhai Multi-Feature Spectrum Engine', explanations = [] }) {
   const prevScoreRef = useRef(humanScore);
 
   // Trigger confetti for high human authenticity score (> 85%)
@@ -40,7 +40,7 @@ export default function ScoreGauge({ aiScore, humanScore, usedFallback, syntheti
       verdict: 'Synthetic AI Metadata Match',
       description: 'Header audit matched explicit AI generator software tags (DALL-E / Midjourney / SDXL).'
     };
-  } else if (aiScore >= 65) {
+  } else if (aiScore >= 60) {
     theme = {
       ringColor: 'stroke-rose-500',
       glowColor: 'drop-shadow-[0_0_15px_rgba(244,63,94,0.4)]',
@@ -49,7 +49,7 @@ export default function ScoreGauge({ aiScore, humanScore, usedFallback, syntheti
       verdict: 'Likely AI-Generated',
       description: 'High spatial smoothness, uniform sentence length, or neural model classification.'
     };
-  } else if (aiScore >= 35) {
+  } else if (aiScore >= 40) {
     theme = {
       ringColor: 'stroke-amber-400',
       glowColor: 'drop-shadow-[0_0_15px_rgba(251,191,36,0.4)]',
@@ -74,13 +74,11 @@ export default function ScoreGauge({ aiScore, humanScore, usedFallback, syntheti
       {/* Background radial glow */}
       <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 via-transparent to-violet-500/5 pointer-events-none" />
 
-      {/* Fallback Banner */}
-      {usedFallback && (
-        <div className="max-w-full truncate px-3 py-1 text-[11px] whitespace-nowrap overflow-hidden flex items-center justify-center space-x-1.5 rounded-full bg-slate-900/90 border border-amber-500/30 text-amber-300 font-mono z-20">
-          <Info className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span className="truncate">Multi-Feature Statistical Inspection Engine Active</span>
-        </div>
-      )}
+      {/* Active Engine Name Badge */}
+      <div className="max-w-full truncate px-3 py-1 text-[11px] whitespace-nowrap overflow-hidden flex items-center justify-center space-x-1.5 rounded-full bg-slate-900/90 border border-cyan-500/30 text-cyan-300 font-mono z-20 shadow-sm">
+        <Server className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+        <span className="truncate">Active Engine: <strong>{engine}</strong></span>
+      </div>
 
       {/* Radial SVG Score Ring */}
       <div className={`relative z-10 flex items-center justify-center ${theme.glowColor}`}>
@@ -149,7 +147,7 @@ export default function ScoreGauge({ aiScore, humanScore, usedFallback, syntheti
         </div>
       </div>
 
-      {/* Itemized Explanations Box ("Why this score?") */}
+      {/* Itemized Explanations Box */}
       {explanations && explanations.length > 0 && (
         <div className="w-full pt-3 border-t border-slate-800/80 relative z-10 text-left space-y-2">
           <h4 className="text-xs font-mono uppercase text-cyan-400 font-bold flex items-center gap-1.5">

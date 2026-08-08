@@ -1,6 +1,6 @@
 /**
- * Hugging Face Serverless Inference Router for ZidBhai AuthentiScan
- * Format: https://router.huggingface.co/hf-inference/models/{MODEL_ID}
+ * Hugging Face Inference API Integration for ZidBhai AuthentiScan
+ * Routing Format: https://router.huggingface.co/hf-inference/models/{MODEL_ID}
  */
 
 const LOCAL_STORAGE_KEY = 'zidbhai_authentiscan_hf_key';
@@ -18,21 +18,23 @@ export function setStoredApiKey(key) {
 }
 
 /**
- * Text Classifier: Hello-SimpleAI/chatgpt-detector-roberta
+ * Text Model: Hello-SimpleAI/chatgpt-detector-roberta
  */
 export async function analyzeTextWithHf(text) {
+  const userToken = getStoredApiKey();
+  if (!userToken) {
+    throw new Error('HF_TOKEN_REQUIRED: Hugging Face Router requires an API token. Enter a free token in settings or use local spectrum analysis.');
+  }
+
   const modelId = 'Hello-SimpleAI/chatgpt-detector-roberta';
   const routerUrl = `https://router.huggingface.co/hf-inference/models/${modelId}`;
-  const userToken = getStoredApiKey();
-
-  const headers = { 'Content-Type': 'application/json' };
-  if (userToken) {
-    headers['Authorization'] = `Bearer ${userToken}`;
-  }
 
   const response = await fetch(routerUrl, {
     method: 'POST',
-    headers,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${userToken}`
+    },
     body: JSON.stringify({ inputs: text.slice(0, 1500) }),
   });
 
@@ -60,52 +62,50 @@ export async function analyzeTextWithHf(text) {
     aiScore,
     humanScore: 100 - aiScore,
     label: aiScore > 50 ? 'AI-Generated Text' : 'Human-Written Text',
+    engine: 'Hugging Face RoBERTa Neural Cloud',
     usedFallback: false,
     raw: data,
   };
 }
 
 /**
- * Image Classifier: umm-maybe/AI-image-detector or Organika/sdxl-detector
+ * Image Model: Ateeqq/ai-vs-human-image-detector or umm-maybe/AI-image-detector
  */
 export async function analyzeImageWithHf(imageBlob) {
-  // Primary model: umm-maybe/AI-image-detector
-  const primaryModel = 'umm-maybe/AI-image-detector';
-  const fallbackModel = 'Organika/sdxl-detector';
-  
   const userToken = getStoredApiKey();
-  const headers = {};
-  if (userToken) {
-    headers['Authorization'] = `Bearer ${userToken}`;
+  if (!userToken) {
+    throw new Error('HF_TOKEN_REQUIRED: Hugging Face Router requires an API token. Enter a free token in settings or use local spectrum analysis.');
   }
 
-  const tryQueryModel = async (modelId) => {
-    const url = `https://router.huggingface.co/hf-inference/models/${modelId}`;
-    const resp = await fetch(url, {
+  const primaryModel = 'Ateeqq/ai-vs-human-image-detector';
+  const fallbackModel = 'umm-maybe/AI-image-detector';
+
+  const tryModel = async (modelId) => {
+    const routerUrl = `https://router.huggingface.co/hf-inference/models/${modelId}`;
+    const response = await fetch(routerUrl, {
       method: 'POST',
-      headers,
+      headers: {
+        'Authorization': `Bearer ${userToken}`
+      },
       body: imageBlob,
     });
-    if (!resp.ok) {
-      throw new Error(`HTTP ${resp.status}`);
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`HF HTTP ${response.status}: ${errText}`);
     }
-    return await resp.json();
+    return await response.json();
   };
 
   let data;
   try {
-    data = await tryQueryModel(primaryModel);
-  } catch (e1) {
-    try {
-      data = await tryQueryModel(fallbackModel);
-    } catch (e2) {
-      throw new Error('Hugging Face Inference endpoints unreachable or rate-limited.');
-    }
+    data = await tryModel(primaryModel);
+  } catch (e) {
+    data = await tryModel(fallbackModel);
   }
 
   let aiScore = 50;
   if (Array.isArray(data)) {
-    const aiItem = data.find(r => r.label && (r.label.toLowerCase().includes('artificial') || r.label.toLowerCase().includes('fake') || r.label.toLowerCase().includes('ai') || r.label.toLowerCase().includes('sdxl') || r.label.toLowerCase().includes('generated')));
+    const aiItem = data.find(r => r.label && (r.label.toLowerCase().includes('artificial') || r.label.toLowerCase().includes('fake') || r.label.toLowerCase().includes('ai') || r.label.toLowerCase().includes('generated')));
     const humanItem = data.find(r => r.label && (r.label.toLowerCase().includes('human') || r.label.toLowerCase().includes('real')));
 
     if (aiItem) {
@@ -119,6 +119,7 @@ export async function analyzeImageWithHf(imageBlob) {
     aiScore,
     humanScore: 100 - aiScore,
     label: aiScore > 50 ? 'AI-Generated Image' : 'Authentic Human Image',
+    engine: 'Hugging Face SigLIP Neural Cloud',
     usedFallback: false,
     raw: data,
   };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Sparkles, AlertCircle, RotateCcw, Layers, Cpu, Server } from 'lucide-react';
+import { FileText, Sparkles, AlertCircle, RotateCcw, Layers, Cpu } from 'lucide-react';
 import ScoreGauge from './ScoreGauge';
 import { analyzeTextWithHf } from '../utils/huggingFaceApi';
 import { analyzeTextWithTruthScan, getStoredTruthScanKey } from '../utils/truthScanApi';
@@ -26,7 +26,6 @@ export default function TextDetector() {
     setIsAnalyzing(true);
 
     try {
-      // 1. TruthScan Server Integration (if API key present)
       if (getStoredTruthScanKey()) {
         try {
           const truthResult = await analyzeTextWithTruthScan(text);
@@ -36,17 +35,16 @@ export default function TextDetector() {
             flaggedPhrases: localMetrics.flaggedPhrases,
             metrics: localMetrics.metrics,
             explanations: [
-              `TruthScan Enterprise API Detection: ${truthResult.aiScore}% AI score.`,
+              `TruthScan Enterprise API Detection: ${truthResult.aiScore}% AI probability.`,
               ...localMetrics.explanations
             ]
           });
           return;
         } catch (tsErr) {
-          console.warn('TruthScan API failed, falling back to Hugging Face / Heuristics:', tsErr.message);
+          console.warn('TruthScan API failed, falling back:', tsErr.message);
         }
       }
 
-      // 2. Primary Hugging Face RoBERTa
       try {
         const hfData = await analyzeTextWithHf(text);
         const localMetrics = analyzeTextHeuristics(text);
@@ -60,7 +58,6 @@ export default function TextDetector() {
           ]
         });
       } catch (hfErr) {
-        // 3. Multi-Factor Local Heuristic Engine
         console.warn('HF Text API rate-limited, running multi-factor heuristic engine:', hfErr.message);
         const fallbackResult = analyzeTextHeuristics(text);
         setResult(fallbackResult);
@@ -121,7 +118,6 @@ export default function TextDetector() {
   return (
     <div className="w-full max-w-6xl mx-auto px-2 sm:px-4 py-2 grid grid-cols-1 lg:grid-cols-12 gap-6">
       
-      {/* Left Column (7 cols) */}
       <div className="lg:col-span-7 space-y-4">
         
         <div className="glass-panel rounded-2xl p-4 sm:p-5 border border-slate-800 shadow-xl relative">
@@ -266,7 +262,6 @@ export default function TextDetector() {
 
       </div>
 
-      {/* Right Result Column (5 cols) */}
       <div className="lg:col-span-5">
         {result ? (
           <ScoreGauge
@@ -274,6 +269,7 @@ export default function TextDetector() {
             humanScore={result.humanScore}
             usedFallback={result.usedFallback}
             label={result.label}
+            engine={result.engine}
             explanations={result.explanations}
           />
         ) : (
